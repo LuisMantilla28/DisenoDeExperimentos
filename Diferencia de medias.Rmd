@@ -1,0 +1,202 @@
+---
+title: "Tarea2"
+author: "Luis Mantilla"
+date: "2023-09-26"
+output:
+  pdf_document: 
+    toc: yes
+    number_sections: yes
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, comment = "#")
+```
+
+# Diferencia de medias
+
+En la página [Link](https://microdatos.dane.gov.co/index.php/catalog/DEM-Microdatos) se descararga las bases de datos del Censo de Habitantes de Calle 2020 y 2021. Realizaremos los siguientes numerales en lenguaje R:
+
+```{r}
+library(readr)
+CHC_2020 <- read_delim("CHC_2020.csv", delim = ";", escape_double = FALSE, trim_ws = TRUE)
+CHC_2021 <- read_csv("CHC_base_anonimizada09-09-2021.csv")
+
+
+```
+
+Tomemos la columna de la edad de cada base de datos:
+
+```{r}
+Edad_2020=CHC_2020$P8R
+Edad_2021=CHC_2021$P8R
+#Quitemos los datos faltante
+Edad_2020=na.omit(Edad_2020)
+Edad_2021=na.omit(Edad_2021)
+```
+
+1.  Haga las pruebas de hipótesis correspondientes para establecer si las variables aleatorias de edad de un habitante de calle en el 2020 y en el 2021 presentan normalidad o no. Veamos si los datos presentan normalidad usando una prueba de Anderson-Darlinng ya que tenemos más de 50 datos:
+
+    ```{r}
+    library("nortest")
+    ad.test(Edad_2020)
+    ad.test(Edad_2021)
+    ```
+
+    Como el valor $p$ para ambas pruebas es menor al $0.05$ entonces decimos que con una confianza del 95% la edad del 2020 y 2021 no presentan normalidad. Además veamos de una manera descriptiva, si los datos se aproximan a la normalidad:
+
+    -   Veamos Las edades del 2020:
+
+    ```{r, echo=FALSE}
+    qqnorm(Edad_2020)
+    qqline(Edad_2020,col="green",lwd = 3)
+    ```
+
+    -   Veamos Las edades del 2021:
+
+    ```{r, echo=FALSE}
+    qqnorm(Edad_2021)
+    qqline(Edad_2021,col="blue",lwd = 3)
+    ```
+
+2.  Asumiendo los supuestos de misma población, independencia entre, independencia dentro y normalidad, encuentre e interprete el intervalo de confianza de la diferencia de medias de edad entre un habitante de calle en el 2020 y un habitante de calle en el 2021. No olvide verificar si se tiene o no igualdad de varianzas a nivel poblacional.
+
+    Sol: Como asumimos normalidad, entonces veamos si mantienen igualdad de varianza: Usando una distribución $F$ , calculemos y las hipotesis
+
+    $$
+    \begin{array}{cc}H_0: & \sigma_X^2 / \sigma_Y^2=1 \\H a: & \sigma_X^2 / \sigma_Y^2 \neq 1\end{array}.
+    $$
+
+    Calculamos el $F_c$ (F calculado):
+
+    ```{r}
+    Fc= var(Edad_2020)/var(Edad_2021)
+    Fc
+    ```
+
+    Y el intervalo de confianza del 95% es:
+
+    ```{r}
+    c(qf(0.05/2, length(Edad_2020) - 1, length(Edad_2021) - 1), 
+      qf(1-0.05/2, length(Edad_2020) - 1, length(Edad_2021) - 1))
+    ```
+
+    Como $Fc$ se encuentra dentro del intervalo de confianza, entonces asumimos con una confianza del 95% que las varianzas son iguales. Entonces desvariamos calcular el intervalo de confianza para la diferencia de medias, para esto usamos la distribución $t$:
+
+    $$
+    H_0: \mu_{2020}-\mu_{2021}=0
+    $$
+
+    $$
+    H_a: \mu_{2020}-\mu_{2021}\neq0
+    $$
+
+    ```{r}
+    t.test(Edad_2020, Edad_2021, var.equal = T)
+    ```
+
+    Como el cero se encuentra en el intervalo de confianza del 95%, entonces decimos que se asume que las medias son iguales con una confianza del 95%.
+
+3.  Asumiendo los supuestos de misma población, independencia entre e independencia dentro, encuentre e interprete el intervalo de confianza de la diferencia de medias de edad entre un habitante de calle en el 2020 y un habitante de calle en el 2021.
+
+    Sol: Por el ejercicio 1, no podemos asumir normalidad en los datos, entonces debemos hacer una prueba de wilcoxon
+
+    ```{r}
+    wilcox.test(Edad_2020, Edad_2021, conf.level = 0.95, conf.int = T)
+    ```
+
+    Dado que el intervalo es de confianza es $(-1, -0.00007)$ entonces decimos que las edades del 2021 son mayores que las edades del 2020 a lo sumo 1 año, con una confianza del 95%.
+
+4.  Pruebe que la edad de primer consumo de cigarrillo en un habitante de calle de Bogotá es igual a la edad de primer consumo de Marihuana, con una confianza del 90%, para el año 2021. Asuma misma población, independencia entre, independencia dentro y normalidad. No olvide verificar si se tiene o no igualdad de varianzas a nivel poblacional.
+
+    Sol: Tomemos los datos
+
+    ```{r}
+    CHC_2021=data.frame(CHC_2021)
+
+    datos=data.frame(cigarrillo=CHC_2021$P30S1A1, marihuana=CHC_2021$P30S3A1)
+
+    datos=na.omit(datos)
+
+    ```
+
+    Veamos si la varianza son iguales:
+
+    ```{r}
+    Fc= var(datos$cigarrillo)/var(datos$marihuana)
+    Fc
+    ```
+
+    ```{r}
+    c(qf(0.1/2, length(datos$cigarrillo) - 1, length(datos$marihuana) - 1), 
+      qf(1-0.1/2, length(datos$cigarrillo) - 1, length(datos$marihuana) - 1))
+    ```
+
+    Con una confianza del 90% rechazamos la hipotiposis nula, es decir rechazamos que las varianzas sean iguales. Por otro lado, de una manera descriptiva veamos si las cajas,en los diagramas de caja se parecen
+
+    ```{r, echo=FALSE}
+    par(mfrow = c(1, 2)) 
+    boxplot(datos$cigarrillo)
+    boxplot(datos$marihuana)
+    ```
+
+    Vemos que las cajas tienen diferente tamaño. Entonces asumiendo que las varianzas no son iguales, calculamos el intervalo de confianza para la diferencia de medias con varianzas distintas:
+
+    ```{r}
+    t.test(datos$cigarrillo, datos$marihuana, var.equal = F, conf.level = 0.90)
+    ```
+
+    Con una confianza del 90% rechazamos que las medias sean iguales. Es decir rechazamos que las edades de inicio de conumo de cigarrillo y marihuana sean iguales, más aun por el intervalo de confianza $(-0.87, -0.38)$ decimos que las edades iniciales de consumo de marihuana es mayor entre 0.38 y 0.87 años que las edades del 2020.
+
+5.  Desarrolle este ejercicio MANUALMENTE: En un grupo de 12 personas se mide el cambio de ritmo cardiaco antes de levantarse y antes de acostarse. Haga las correspondientes pruebas de hipótesis utilizando la siguiente tabla:
+
+    ![](images/Captura%20de%20pantalla%202023-09-26%20095517.png)
+
+    Pruebe la hipótesis de que el ritmo cardíaco de las personas es igual antes de levantarse al ritmo cardíaco de antes de acostarse con una confianza del 95%. Concluya. Para responder este numeral vea el vídeo wilcoxon.wmv subido en Google Classroom.
+
+    Sol: Tomemos los datos:
+
+    ```{r}
+    AL=c(-2,4,8,25,-5,16,3,1,12,17,20,9)
+    AC=c(-3,-2,7,20,-3,17,7,-1,13,15,22,8)
+    ```
+
+    Ahora se hace la diferencia de uno por uno
+
+    ```{r, echo=FALSE}
+    dif=AL-AC
+    dif
+    ```
+
+    Ahora el absoluto de cada termino:
+
+    ```{r, echo=FALSE}
+    absDif=abs(dif)
+    absDif
+    ```
+
+    Ahora agrupando todo en una matriz, tenemos en la primera columna la diferencia, luego el valor absoluto de la diferencia, en la tercer columna el $R^+$ y en la ultima $S(x_i-\theta_0)$ :
+
+    ```{r, echo=FALSE}
+
+    R=cbind2(dif,absDif)
+    R=cbind2(R,c(3, 12, 3,11 , 7.5,3,10, 7.5,3, 7.5, 7.5, 3))
+    R= cbind2(R,c(1,1,1,1,0,0,0,1,0,1,0,1))
+    R
+    ```
+
+    Ahora calculamos el estadistico de prueba $W_s$ :
+
+    ```{r}
+    S=0
+    for (i in 1:12){
+      S=S+ R[i,3]*R[i,4]
+    }
+    S
+    ```
+
+    Entonces $W_c=47$, con base en tabla de wilcoxon
+
+    ![](images/Captura%20de%20pantalla%202023-09-26%20105411.png)
+
+    y con $\alpha=0.05$, a dos colas, entonces la región critica está en los valores menores que 10, y dado que nuestro valor estimado es 47, no rechazamos la hipótesis nula, es decir tenemos igualdad de medianas o el ritmo cardíaco de las personas es igual al del levantarse y acostarse.
