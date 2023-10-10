@@ -1,0 +1,74 @@
+---
+title: "clase 10"
+author: "Luis Mantilla"
+date: "2023-09-20"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Diseño completamente al azar
+
+Te toman los datos de ciertos insectos. A cada uno se le aplica un tratamiento entre "azul", "verde", "Blanco", y "Amarillo".
+
+```{r}
+insectos <- c(16,11,20,21,14,7,37,32,15,25,39,41,21,12,14,17,13,17,
+45,59,48,46,38,47)
+colores <- as.factor(c(rep(c("azul", "verde", "blanco", "amarillo"),
+each =6)))
+head(data.frame(insectos, colores))
+```
+
+En este caso, observemos que tiene la misma cantidad de individuos cada color, esto uiere decir que el diseño es balanceado.
+
+```{r}
+#Con la función aov se hace el análisis de la varianza de un diseño completamente aleatorizado.
+fm = aov(lm(insectos ~ colores))
+summary(fm)
+```
+
+como el valor $p$ es menor al 5%, entonces hay tratamientos que afectan al peso del insecto. Entonces veamos la comparaciones múltiples para determinar qué media presenta comportamiento distinto respecto a las otras.
+
+```{r}
+TukeyHSD(fm)
+```
+
+```{r}
+plot(TukeyHSD(fm),las=0)
+```
+
+Veamos que los tratamientos que más difieren es azul-amarillo y blanco-negro.
+
+Usemos el método de Bonferroni:
+
+```{r}
+pairwise.t.test(x = insectos, g = colores,p.adjust.method = "bonferroni", pool.sd = TRUE, paired = FALSE, alternative = "two.sided")
+```
+
+Veamos que con una confianza del 95% podemos decir que no se considera la igualdad para los métodos azul-blanco. Ahora veamos que tanto afecta el color en el peso de los insectos
+
+```{r}
+library(lsr)
+etaSquared(fm)
+```
+
+Como el valor es del 0.82 decimos que el peo se ve altamente afectado por los colores. Diagrama de caja y bigotes:
+
+```{r}
+boxplot(insectos ~ colores, col=2:5)
+```
+
+el mejor tratamiento es el que tiene menor variabilidad, en este caso es el amarillo.
+
+```{r}
+datos_medias=c(47.1, 15.6, 31.5, 14.83)
+power.anova.test(groups = 4, n = 6,
+between.var = var(datos_medias-mean(insectos)),
+within.var = var(fm$residuals))
+```
+
+en este caso la prueba es adecuada, ya que la potencia es 1.
